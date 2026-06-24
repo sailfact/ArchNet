@@ -1,0 +1,41 @@
+name: Build Custom ISO
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Initialize Pacman & Install Archiso Setup
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso mkinitcpio-archiso
+
+      - name: Create Output Directories
+        run: |
+          mkdir -p out
+          mkdir -p /tmp/archiso-workspace
+
+      - name: Compile the ISO
+        run: |
+          mkarchiso -v \
+            -w /tmp/archiso-workspace \
+            -o ./out \
+            ./archprofile
+
+      - name: Upload Finished ISO as a GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-arch-distro
+          path: out/*.iso
+          retention-days: 3

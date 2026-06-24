@@ -1,0 +1,29 @@
+# --- Core System ---
+linux
+linux-firmware
+base
+intel-ucode
+amd-ucode
+
+# --- Networking & Sound ---
+networkmanager
+iw
+wireless_tools
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+
+# --- Graphical Interface (Xorg + i3 WM) ---
+xorg-server
+xorg-xinit
+i3-wm
+i3status
+dmenu
+kitty          # A modern, fast terminal emulator
+
+# --- Utilities ---
+neofetch
+sudo
+nano
+git
