@@ -1,29 +1,29 @@
-# --- Core System ---
+# === CORE SYSTEM ===
+amd-ucode
+base
+efibootmgr
+grub
+intel-ucode
 linux
 linux-firmware
-base
-intel-ucode
-amd-ucode
-
-# --- Networking & Sound ---
-networkmanager
-iw
-wireless_tools
-pipewire
-pipewire-alsa
-pipewire-pulse
-pipewire-jack
-
-# --- Graphical Interface (Xorg + i3 WM) ---
-xorg-server
-xorg-xinit
-i3-wm
-i3status
-dmenu
-kitty          # A modern, fast terminal emulator
-
-# --- Utilities ---
-neofetch
+mkinitcpio
+mkinitcpio-archiso
 sudo
-nano
-git
+syslinux
+systemd-resolvconf
+
+# === FIREWALL & NETWORKING ===
+dnsmasq
+jq
+nftables
+openssh
+tcpdump
+
+# === UTILITIES ===
+neovim
+vim
+
+# === VIRTUALIZATION / TEST LAB ===
+open-vm-tools
+qemu-guest-agent
+virtualbox-guest-utils-nox

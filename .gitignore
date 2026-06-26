@@ -1,0 +1,9 @@
+_out/*
+*.code-workspace
+profile/airootfs/etc/localtime
+# Ignore dynamically generated system links
+profile/airootfs/etc/localtime
+profile/airootfs/etc/resolv.conf
+
+profile/airootfs/etc/systemd/system-generators/
+profile/airootfs/etc/systemd/system/
