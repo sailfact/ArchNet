@@ -1,8 +1,12 @@
-_out/*
-*.code-workspace
-etc/localtime
-# Ignore dynamically generated system links
+# Build output
+_out/
+out/
+*.iso
+# Dynamically generated system links (created during build)
 etc/localtime
 etc/resolv.conf
 etc/systemd/system-generators/
 etc/systemd/system/
+
+# Workspace files
+*.code-workspace
