@@ -1,4 +1,3 @@
-# === CORE SYSTEM ===
 amd-ucode
 base
 efibootmgr
@@ -11,19 +10,13 @@ mkinitcpio-archiso
 sudo
 syslinux
 systemd-resolvconf
-
-# === FIREWALL & NETWORKING ===
 dnsmasq
 jq
 nftables
 openssh
 tcpdump
-
-# === UTILITIES ===
 neovim
 vim
-
-# === VIRTUALIZATION / TEST LAB ===
 open-vm-tools
 qemu-guest-agent
 virtualbox-guest-utils-nox
