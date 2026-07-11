@@ -1,0 +1,2 @@
+fwOS Phase 1 base image
+Warning: this image has no active firewall policy. Use the local console only.

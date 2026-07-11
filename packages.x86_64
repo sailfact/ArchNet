@@ -1,0 +1,16 @@
+amd-ucode
+base
+curl
+dnsmasq
+intel-ucode
+iproute2
+jq
+linux
+linux-firmware
+mkinitcpio
+mkinitcpio-archiso
+nftables
+openssh
+pv
+syslinux
+vim
