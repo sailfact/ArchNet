@@ -103,4 +103,29 @@ for file in syslinux/syslinux-linux.cfg grub/grub.cfg grub/loopback.cfg; do
     assert_contains "$file" 'systemd.unit=rescue.target'
 done
 
+for target in iso qemu qemu-bios test; do
+    make -n "$target" >/dev/null || fail "broken Make target: $target"
+done
+bash -n profiledef.sh scripts/qemu-smoke.sh tests/phase1-profile.sh tests/qemu-smoke.sh
+
+for path in Dockerfile entrypoint.sh .github/workflows/build.yml packages.txt; do
+    assert_absent "$path"
+done
+
+assert_file README.md
+assert_file CHANGELOG.md
+assert_file AGENTS.md
+assert_link CLAUDE.md AGENTS.md
+for command in 'make iso' 'make test' 'make qemu' 'make qemu-bios'; do
+    assert_contains README.md "$command"
+done
+assert_contains AGENTS.md '`make qemu`'
+
+if grep -R -E 'pacman[[:space:]]+-S(yu|yyu)' README.md Makefile .github 2>/dev/null; then
+    fail 'blind pacman upgrade command found'
+fi
+if grep -Eq '^clean:' Makefile; then
+    fail 'unsafe clean target found'
+fi
+
 printf 'phase1-profile: ok\n'

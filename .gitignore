@@ -1,12 +1,4 @@
-# Build output
 _out/
-out/
+_work/
 *.iso
-# Dynamically generated system links (created during build)
-etc/localtime
-etc/resolv.conf
-etc/systemd/system-generators/
-etc/systemd/system/
-
-# Workspace files
 *.code-workspace
