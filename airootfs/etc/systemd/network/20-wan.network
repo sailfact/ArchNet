@@ -1,0 +1,8 @@
+# fwOS Phase 2 static default topology; the Phase 3 config engine replaces
+# this file with rendered output. Do not hand-edit on a running system.
+[Match]
+Name=eth0
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no

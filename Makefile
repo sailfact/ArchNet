@@ -17,7 +17,7 @@ iso:
 	@installed="$$(pacman -Q archiso 2>/dev/null || true)"; test "$$installed" = "archiso $(ARCHISO_VERSION)" || { echo 'make iso: archiso 88-1 is required' >&2; exit 1; }
 	@test ! -e "$(WORK_DIR)" || { echo 'make iso: _work exists; inspect mounts before removing it' >&2; exit 1; }
 	@test ! -e "$(ISO)" || { echo 'make iso: output ISO already exists; move it before rebuilding' >&2; exit 1; }
-	@./tests/phase1-profile.sh
+	@./tests/phase2-profile.sh
 	@sudo -v
 	@mkdir -p "$(OUT_DIR)"
 	sudo env SOURCE_DATE_EPOCH="$(SOURCE_DATE_EPOCH)" mkarchiso -v -r -w "$(WORK_DIR)" -o "$(OUT_DIR)" .
@@ -35,7 +35,9 @@ qemu-bios:
 test:
 	@test -f "$(ISO)" || { echo 'make test: build the ISO first' >&2; exit 1; }
 	@newer="$$(find Makefile profiledef.sh packages.x86_64 pacman.conf airootfs syslinux grub -newer "$(ISO)" -print -quit)"; test -z "$$newer" || { echo "make test: ISO is older than $$newer; rebuild it" >&2; exit 1; }
-	./tests/phase1-profile.sh
+	./tests/phase2-profile.sh
 	./tests/qemu-smoke.sh
+	./tests/qemu-net-lab.sh
 	./scripts/qemu-smoke.sh bios "$(ISO)"
 	./scripts/qemu-smoke.sh uefi "$(ISO)"
+	./scripts/qemu-net-lab.sh "$(ISO)"

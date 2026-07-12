@@ -1,2 +1,4 @@
-fwOS Phase 1 base image
-Warning: this image has no active firewall policy. Use the local console only.
+fwOS Phase 2 basic firewall image
+Topology: WAN=eth0 (DHCP client) | LAN=eth1 (10.10.10.1/24, DHCP 10.10.10.100-10.10.10.200)
+Policy: default-deny unsolicited WAN ingress; NAT LAN->WAN; management from the LAN only.
+SSH (LAN only): root / fwos — interim default credentials; console logins are automatic.
