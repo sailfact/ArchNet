@@ -41,6 +41,15 @@ assert_contains profiledef.sh 'iso_name="fwos"'
 assert_contains profiledef.sh "'bios.syslinux'"
 assert_contains profiledef.sh "'uefi.grub'"
 assert_contains profiledef.sh 'airootfs_image_type="erofs"'
+metadata="$(
+    TZ=America/Los_Angeles SOURCE_DATE_EPOCH=1783641600 bash -c '
+        declare -A file_permissions=()
+        source profiledef.sh
+        printf "%s %s" "$iso_label" "$iso_version"
+    '
+)"
+[[ "$metadata" == 'FWOS_20260710 2026.07.10' ]] ||
+    fail "metadata mismatch: expected FWOS_20260710 2026.07.10, got $metadata"
 
 required_packages=(
     amd-ucode base curl dnsmasq intel-ucode iproute2 jq linux linux-firmware

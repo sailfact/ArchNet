@@ -2,10 +2,10 @@
 # shellcheck disable=SC2034
 
 iso_name="fwos"
-iso_label="FWOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m%d)"
+iso_label="FWOS_$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m%d)"
 iso_publisher="fwOS project"
 iso_application="fwOS Phase 1 base image"
-iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
+iso_version="$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="fwos"
 buildmodes=('iso')
 bootmodes=('bios.syslinux'
