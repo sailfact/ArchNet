@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fwos.invalid/config/schema.json",
+  "title": "fwOS configuration",
+  "description": "Schema for /etc/project/config.yaml, the single source of truth for fwOS runtime configuration. Structural validation only; cross-reference rules are enforced by the config engine's semantic checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "system",
+    "interfaces",
+    "zones",
+    "rules",
+    "nat",
+    "dhcp",
+    "dns",
+    "users",
+    "services"
+  ],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Config model version; migrations key off this."
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostname"],
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+        }
+      }
+    },
+    "interfaces": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]{0,15}$": { "$ref": "#/$defs/interface" }
+      }
+    },
+    "zones": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]{0,15}$": { "$ref": "#/$defs/zone" }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    },
+    "nat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["masquerade"],
+      "properties": {
+        "masquerade": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/masquerade" }
+        }
+      }
+    },
+    "dhcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["servers"],
+      "properties": {
+        "servers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dhcp_server" }
+        }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "upstream", "local_records"],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$"
+        },
+        "upstream": {
+          "enum": ["resolved"],
+          "description": "DNS upstream source. Only systemd-resolved for the MVP; kept as an enum so alternative backends slot in without a model rewrite."
+        },
+        "local_records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/local_record" }
+        }
+      }
+    },
+    "users": {
+      "type": "array",
+      "description": "Validated placeholder in Phase 3; not yet rendered into system state.",
+      "items": { "$ref": "#/$defs/user" }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ssh"],
+      "properties": {
+        "ssh": {
+          "type": "object",
+          "description": "Validated placeholder in Phase 3; sshd configuration remains a static build input.",
+          "additionalProperties": false,
+          "required": ["enabled", "zones"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "zones": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/zone_name" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "zone_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,15}$"
+    },
+    "ipv4_address": {
+      "type": "string",
+      "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+    },
+    "ipv4_cidr": {
+      "type": "string",
+      "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/(3[0-2]|[12]?[0-9])$"
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device", "ipv4"],
+      "properties": {
+        "device": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]{0,14}$"
+        },
+        "ipv4": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["dhcp", "static"] },
+            "address": { "$ref": "#/$defs/ipv4_cidr" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "mode": { "const": "static" } } },
+              "then": { "required": ["address"] }
+            },
+            {
+              "if": { "properties": { "mode": { "const": "dhcp" } } },
+              "then": { "not": { "required": ["address"] } }
+            }
+          ]
+        }
+      }
+    },
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interfaces"],
+      "properties": {
+        "interfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,15}$"
+          }
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "from", "to", "action"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+        },
+        "from": { "$ref": "#/$defs/zone_name" },
+        "to": { "$ref": "#/$defs/zone_name" },
+        "action": { "enum": ["accept", "drop"] },
+        "protocol": { "enum": ["tcp", "udp", "icmp"] },
+        "dport": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 65535 },
+            {
+              "type": "string",
+              "pattern": "^[0-9]{1,5}-[0-9]{1,5}$"
+            }
+          ]
+        },
+        "comment": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "masquerade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "out"],
+      "properties": {
+        "from": { "$ref": "#/$defs/zone_name" },
+        "out": { "$ref": "#/$defs/zone_name" }
+      }
+    },
+    "dhcp_server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "range", "lease_time"],
+      "properties": {
+        "interface": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,15}$"
+        },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "$ref": "#/$defs/ipv4_address" },
+            "end": { "$ref": "#/$defs/ipv4_address" }
+          }
+        },
+        "lease_time": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[smhd]$"
+        }
+      }
+    },
+    "local_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "address"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$"
+        },
+        "address": { "$ref": "#/$defs/ipv4_address" }
+      }
+    },
+    "user": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "role"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z_][a-z0-9_-]{0,31}$"
+        },
+        "role": { "enum": ["admin"] },
+        "ssh_keys": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
