@@ -220,6 +220,10 @@ for command in 'make iso' 'make test' 'make qemu' 'make qemu-bios'; do
     assert_contains README.md "$command"
 done
 assert_contains README.md 'default password `fwos`'
+assert_contains README.md 'fwctl'
+assert_contains README.md 'make check'
+assert_file docs/Config-Model.md
+assert_contains docs/Config-Model.md 'Validate -> Render -> Test -> Apply -> Confirm -> Commit'
 assert_contains AGENTS.md '`make qemu`'
 
 if grep -R -E 'pacman[[:space:]]+-S(yu|yyu)' README.md Makefile .github 2>/dev/null; then
