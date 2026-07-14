@@ -1,0 +1,69 @@
+# fwOS source configuration example: the Phase 2 default topology expressed
+# in the Phase 3 config model. The ISO build stages this file to
+# /etc/project/config.yaml, the single source of truth on the appliance.
+#
+# Edit the config and run `fwctl apply`; never edit rendered files under
+# /etc (nftables.conf, dnsmasq.conf, systemd-networkd units) directly.
+version: 1
+
+system:
+  hostname: fwos
+
+interfaces:
+  wan:
+    device: eth0
+    ipv4:
+      mode: dhcp
+  lan:
+    device: eth1
+    ipv4:
+      mode: static
+      address: 10.10.10.1/24
+
+zones:
+  wan:
+    interfaces: [wan]
+  lan:
+    interfaces: [lan]
+
+# Rules are evaluated in order on top of the implicit base policy:
+# default-deny input/forward, established/related accepted, invalid dropped,
+# loopback accepted, and WAN DHCP client lease traffic accepted while a
+# WAN-zone interface uses ipv4 mode dhcp. The reserved zone "firewall"
+# addresses the appliance itself (nftables input chain).
+rules:
+  - name: lan-to-firewall
+    from: lan
+    to: firewall
+    action: accept
+  - name: lan-to-wan
+    from: lan
+    to: wan
+    action: accept
+
+nat:
+  masquerade:
+    - from: lan
+      out: wan
+
+dhcp:
+  servers:
+    - interface: lan
+      range:
+        start: 10.10.10.100
+        end: 10.10.10.200
+      lease_time: 12h
+
+dns:
+  domain: lan
+  upstream: resolved
+  local_records: []
+
+# Placeholder sections: validated by the schema but not yet rendered into
+# system state in Phase 3 (sshd stays a static build input until hardening).
+users: []
+
+services:
+  ssh:
+    enabled: true
+    zones: [lan]

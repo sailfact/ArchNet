@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fwos-core"
+version = "0.1.0"
+description = "fwOS config engine: model, validation, renderers, apply state machine"
+requires-python = ">=3.11"
+dependencies = [
+    "PyYAML",
+    "jsonschema",
+]
+
+[tool.setuptools]
+packages = [
+    "fwos_core",
+    "fwos_core.render",
+    "fwos_core.apply",
+]

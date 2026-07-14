@@ -26,15 +26,15 @@ fwOS is the working name for an Arch-based firewall/router appliance managed dec
 - `.codex/` is empty, environment-owned Codex metadata; never add product code here.
 - `.git/` contains version-control metadata; never edit it directly.
 - `.github/` contains CI workflows only; never put runtime logic there.
-- `cli/` is currently empty; put `fwctl` code here after its language is decided, never core rendering logic or direct system-file writers.
-- `config/` is currently empty; put the schema and source configuration examples here, never rendered service files.
-- `core/` is currently empty; put the config model, renderers, and apply state machine here, never UI code.
-- `scripts/` contains verified build and QEMU test helpers; never put core product behavior there.
-- `tests/` contains the Phase 1 profile and QEMU checks; keep production configuration out.
+- `cli/` contains `fwctl` (`fwos_cli`, Python): argument parsing and output formatting only, never core rendering logic or direct system-file writers.
+- `config/` contains `schema.json` and `example-config.yaml`; never put rendered service files here.
+- `core/` contains the config model, renderers, and apply state machine (`fwos_core`, Python); never UI code.
+- `scripts/` contains verified build and QEMU test helpers, including `stage-airootfs.sh`; never put core product behavior there.
+- `tests/` contains the profile contract test, the `tests/unit/` pytest suite, and QEMU checks; keep production configuration out.
 
 ## 4. The config model contract
 
-- Keep the repository schema under `config/`; no schema file exists yet, so stop and obtain sign-off before choosing its filename.
+- The repository schema is `config/schema.json` (JSON Schema draft 2020-12; signed off in Phase 3).
 - Parse YAML and pass JSON Schema validation before rendering. Treat validation as the gate, not an advisory check.
 - Treat every schema change as a breaking change that cascades into `fwctl`, the API, and the Web UI. Obtain explicit sign-off before changing it.
 
@@ -42,7 +42,8 @@ fwOS is the working name for an Arch-based firewall/router appliance managed dec
 
 | Tier | Target time | Use it for | Current entrypoint |
 |---|---:|---|---|
-| netns | seconds | Rule behavior and config-render logic | Planned; no repository command exists yet |
+| unit tests | seconds | Config-render logic and the apply state machine (fake executors) | `make check` (`python -m pytest`) |
+| netns | seconds | Real rule behavior without a VM | Planned; no repository command exists yet |
 | QEMU | about 1 minute | Real boot, UEFI, and init behavior | `make qemu` for interactive UEFI boot; `make test` gates BIOS and UEFI. |
 | libvirt/LXD staging | minutes | End-to-end behavior with a real upstream | Planned; no repository command exists yet |
 
@@ -72,9 +73,10 @@ A phase is done only when every item passes:
 Stop and ask before choosing any of these:
 
 - Build the ISO locally or in cloud CI from day one.
-- Implement `fwctl` in Python, Go, Rust, or another language.
 - Keep dnsmasq only or later add an unbound/kea advanced backend.
 - Keep the base mutable or move toward a semi-immutable design.
+
+Decided (do not re-litigate without explicit approval): `fwctl` and the config engine are implemented in Python (PyYAML + jsonschema; signed off in Phase 3).
 
 Do not turn a plan recommendation into a decision without explicit approval.
 

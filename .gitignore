@@ -2,3 +2,15 @@ _out/
 _work/
 *.iso
 *.code-workspace
+__pycache__/
+.pytest_cache/
+
+# Build output staged by scripts/stage-airootfs.sh; never commit rendered
+# runtime state or the staged engine copy.
+/airootfs/usr/lib/fwos/
+/airootfs/etc/project/
+/airootfs/var/lib/project/
+/airootfs/etc/nftables.conf
+/airootfs/etc/dnsmasq.conf
+/airootfs/etc/hostname
+/airootfs/etc/systemd/network/*.network

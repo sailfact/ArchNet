@@ -4,7 +4,7 @@
 iso_name="fwos"
 iso_label="FWOS_$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m%d)"
 iso_publisher="fwOS project"
-iso_application="fwOS Phase 2 basic firewall image"
+iso_application="fwOS Phase 3 declarative firewall image"
 iso_version="$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="fwos"
 buildmodes=('iso')
@@ -15,4 +15,5 @@ airootfs_image_type="erofs"
 airootfs_image_tool_options=('-zlzma,109' -E 'ztailpacking')
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
+  ["/usr/local/bin/fwctl"]="0:0:755"
 )

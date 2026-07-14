@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fwos-cli"
+version = "0.1.0"
+description = "fwctl: management CLI for the fwOS config engine"
+requires-python = ">=3.11"
+dependencies = [
+    "fwos-core",
+]
+
+[project.scripts]
+fwctl = "fwos_cli.main:main"
+
+[tool.setuptools]
+packages = ["fwos_cli"]

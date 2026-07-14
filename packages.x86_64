@@ -12,5 +12,8 @@ mkinitcpio-archiso
 nftables
 openssh
 pv
+python
+python-jsonschema
+python-yaml
 syslinux
 vim

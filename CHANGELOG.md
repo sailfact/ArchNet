@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add the Phase 3 declarative config engine: `/etc/project/config.yaml` (validated against `config/schema.json`, JSON Schema draft 2020-12 plus semantic cross-reference checks) is now the single source of truth, rendered deterministically into the nftables ruleset, dnsmasq configuration, systemd-networkd units, and `/etc/hostname` (set live via `hostnamectl`; applies also run `networkctl reconfigure` on managed links so address changes take effect immediately).
+- Add `fwctl` (Python, thin Phase 4 slice): `validate`, `render` (unified-diff dry run), `apply --timeout`, `confirm`, `rollback [--to ID|--pending]`, `status`, with `--json` output and distinct exit codes for validation and test-stage failures.
+- Enforce the apply state machine `Validate -> Render -> Test -> Apply -> Confirm -> Commit`: unconditional pre-apply backups under `/var/lib/project/backups/` (last 10 kept), a verified `systemd-run` rollback timer armed before any file is installed, automatic revert of unconfirmed or failed applies, and forensic pre-rollback snapshots.
+- Render the shipped service files at ISO build time (`make stage`): the four hand-written interim configs are deleted from the repository and all staged engine/rendered output under `airootfs/` is gitignored build product. The image gains `python`, `python-jsonschema`, `python-yaml`, and the `/usr/local/bin/fwctl` shim.
+- Add `make check` (config-engine unit tests: schema, semantics, renderer goldens, state machine with fake executors, CLI) and the single-VM QEMU config lab (`scripts/qemu-config-lab.sh`) covering the lockout/rollback drill, a confirmed apply, and a manual rollback in the booted guest; both wired into `make test`. Replace `tests/phase2-profile.sh` with `tests/phase3-profile.sh`.
 - Add the Phase 2 basic firewall: WAN DHCP on `eth0`, LAN `10.10.10.1/24` on `eth1`, dnsmasq DHCP (`10.10.10.100`–`10.10.10.200`) and DNS forwarding, IPv4 forwarding, and a default-deny nftables policy with LAN→WAN NAT. SSH is enabled for the LAN only (interim `root`/`fwos` credentials); console logins are automatic. Interface names are fixed via `net.ifnames=0`.
 - Add the two-VM QEMU network lab (`scripts/qemu-net-lab.sh`), run by `make test`, covering DHCP, DNS, NAT, LAN-only SSH, and the WAN default-deny.
 - Replace the Phase 1 profile contract test with `tests/phase2-profile.sh`.
