@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# fwOS management CLI: runs the staged config engine under /usr/lib/fwos.
+export PYTHONPATH=/usr/lib/fwos${PYTHONPATH:+:$PYTHONPATH}
+exec /usr/bin/python -m fwos_cli "$@"
