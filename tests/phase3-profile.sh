@@ -201,8 +201,10 @@ for target in iso qemu qemu-bios test stage check; do
     make -n "$target" >/dev/null || fail "broken Make target: $target"
 done
 bash -n profiledef.sh scripts/qemu-smoke.sh scripts/qemu-net-lab.sh \
-    scripts/stage-airootfs.sh airootfs/usr/local/bin/fwctl \
-    tests/phase3-profile.sh tests/qemu-smoke.sh tests/qemu-net-lab.sh
+    scripts/qemu-config-lab.sh scripts/stage-airootfs.sh \
+    airootfs/usr/local/bin/fwctl \
+    tests/phase3-profile.sh tests/qemu-smoke.sh tests/qemu-net-lab.sh \
+    tests/qemu-config-lab.sh
 
 for path in Dockerfile entrypoint.sh .github/workflows/build.yml packages.txt \
     tests/phase1-profile.sh tests/phase2-profile.sh

@@ -46,6 +46,8 @@ test: stage check
 	./tests/phase3-profile.sh
 	./tests/qemu-smoke.sh
 	./tests/qemu-net-lab.sh
+	./tests/qemu-config-lab.sh
 	./scripts/qemu-smoke.sh bios "$(ISO)"
 	./scripts/qemu-smoke.sh uefi "$(ISO)"
 	./scripts/qemu-net-lab.sh "$(ISO)"
+	./scripts/qemu-config-lab.sh "$(ISO)"
