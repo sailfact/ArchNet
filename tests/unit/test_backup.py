@@ -59,6 +59,18 @@ def test_prune_keeps_newest_ten(system):
     assert remaining[-1] == "20260713T110000Z"
 
 
+def test_prune_never_deletes_preserved_backup(system):
+    executor, _ = system
+    preserved = "20260713T000000Z"
+    for hour in range(12):
+        backup.create_backup(
+            executor, PATHS, f"20260713T{hour:02d}0000Z", preserve={preserved}
+        )
+    remaining = backup.list_backups(executor, PATHS)
+    assert preserved in remaining
+    assert len(remaining) == 11  # the 10 newest plus the preserved one
+
+
 def test_restore_round_trip(system, example_text):
     executor, files = system
     backup_id = backup.create_backup(executor, PATHS, "20260713T120000Z")

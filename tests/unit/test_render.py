@@ -18,9 +18,14 @@ GOLDEN = Path(__file__).parent / "golden" / "default"
 EXPECTED_PATHS = {
     "etc/nftables.conf",
     "etc/dnsmasq.conf",
+    "etc/hostname",
     "etc/systemd/network/20-wan.network",
     "etc/systemd/network/30-lan.network",
 }
+
+# /etc/hostname must stay byte-identical to what hostnamectl writes back,
+# so it is the one rendered file without the generated banner.
+UNBANNERED = {"etc/hostname"}
 
 
 @pytest.fixture
@@ -47,7 +52,13 @@ def test_render_is_deterministic(config, example_doc):
 
 def test_every_file_carries_generated_header(config):
     for rel, content in render_all(config).items():
+        if rel in UNBANNERED:
+            continue
         assert GENERATED_HEADER in content, rel
+
+
+def test_hostname_rendered_as_bare_name(config):
+    assert render_all(config)["etc/hostname"] == "fwos\n"
 
 
 def test_networkd_dhcp_and_static_bodies(config):

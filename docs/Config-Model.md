@@ -12,9 +12,9 @@ the appliance's initial config.
 | Section | Contents | Notes |
 |---|---|---|
 | `version` | Config model version | Must be `1`; migrations key off it. |
-| `system.hostname` | Appliance hostname | Also becomes the `<hostname>.<domain>` DNS record. |
+| `system.hostname` | Appliance hostname | Rendered to `/etc/hostname` (bare name, no banner — `hostnamectl` must be able to rewrite it identically), applied live via `hostnamectl set-hostname`, and used for the `<hostname>.<domain>` DNS record. |
 | `interfaces.<name>` | `device` (e.g. `eth0`), `ipv4.mode` (`dhcp` or `static`), `ipv4.address` (CIDR, static only) | One IPv4 address per interface in the MVP. |
-| `zones.<name>` | `interfaces: [..]` | Every interface belongs to exactly one zone. `firewall` is reserved for the appliance itself. |
+| `zones.<name>` | `interfaces: [..]` | Every interface belongs to exactly one zone. `firewall` is reserved for the appliance itself. Zone names become nftables identifiers (`<zone>_if`), so they allow underscores but not hyphens. |
 | `rules[]` | `name`, `from`, `to`, `action` (`accept`/`drop`), optional `protocol` (`tcp`/`udp`/`icmp`), `dport` (port or `a-b`), `comment` | Ordered; evaluated on top of the implicit base policy. `to: firewall` targets the input chain, any other zone the forward chain. |
 | `nat.masquerade[]` | `from`, `out` zones | Scoped to the source zone's static subnets when they are all known. |
 | `dhcp.servers[]` | `interface`, `range.start/end`, `lease_time` | Interface must be static; range must sit inside its subnet and exclude the interface address. |
@@ -60,7 +60,10 @@ Every change runs `Validate -> Render -> Test -> Apply -> Confirm -> Commit`:
    `/var/lib/project/backups/<timestamp>/` (last 10 kept), pending state
    written, rollback timer armed via a `systemd-run` transient unit and
    verified active, and only then are files installed and services
-   reloaded (`nft -f`, `networkctl reload`, `systemctl restart dnsmasq`).
+   reloaded: `nft -f`, `networkctl reload` **plus** `networkctl
+   reconfigure` of every managed link (reload alone only re-reads unit
+   files and would leave the old addresses live until reboot),
+   `hostnamectl set-hostname`, and finally `systemctl restart dnsmasq`.
    Any failure here restores the backup immediately.
 5. **Confirm** — `fwctl confirm` within the window (default 120 s,
    `apply --timeout N`) cancels the timer; otherwise the timer runs
@@ -71,7 +74,9 @@ Every change runs `Validate -> Render -> Test -> Apply -> Confirm -> Commit`:
 
 Rollback (timer-fired or manual `fwctl rollback [--to ID]`) restores the
 backup's config and rendered files, reloads services, and first saves the
-discarded state as a `*-prerollback` backup for forensics. Rollback is
+discarded state as a `*-prerollback` backup for forensics (the restore
+target is exempt from backup pruning so taking that snapshot can never
+delete it). Rollback is
 deliberately immediate and unconfirmed — it is the safety net, and arming
 a timer for it would recurse.
 

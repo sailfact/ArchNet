@@ -20,11 +20,21 @@ __all__ = [
     "NETWORK_DIR",
     "NFTABLES_PATH",
     "DNSMASQ_PATH",
+    "HOSTNAME_PATH",
     "render_networkd",
     "render_nftables",
     "render_dnsmasq",
+    "render_hostname",
     "render_all",
 ]
+
+HOSTNAME_PATH = "etc/hostname"
+
+
+def render_hostname(config: Config) -> str:
+    # No banner: hostnamectl rewrites this file as the bare name, and the
+    # rendered content must match it exactly or dry-run diffs would drift.
+    return config.hostname + "\n"
 
 
 def render_all(config: Config) -> Dict[str, str]:
@@ -32,6 +42,7 @@ def render_all(config: Config) -> Dict[str, str]:
     files: Dict[str, str] = {
         NFTABLES_PATH: render_nftables(config),
         DNSMASQ_PATH: render_dnsmasq(config),
+        HOSTNAME_PATH: render_hostname(config),
     }
     files.update(render_networkd(config))
     return files

@@ -12,4 +12,5 @@ __pycache__/
 /airootfs/var/lib/project/
 /airootfs/etc/nftables.conf
 /airootfs/etc/dnsmasq.conf
+/airootfs/etc/hostname
 /airootfs/etc/systemd/network/*.network

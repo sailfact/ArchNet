@@ -46,7 +46,7 @@
       "minProperties": 1,
       "additionalProperties": false,
       "patternProperties": {
-        "^[a-z][a-z0-9-]{0,15}$": { "$ref": "#/$defs/zone" }
+        "^[a-z][a-z0-9_]{0,15}$": { "$ref": "#/$defs/zone" }
       }
     },
     "rules": {
@@ -123,7 +123,8 @@
   "$defs": {
     "zone_name": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]{0,15}$"
+      "pattern": "^[a-z][a-z0-9_]{0,15}$",
+      "description": "Zone names become nftables identifiers (<zone>_if), so hyphens are not allowed."
     },
     "ipv4_address": {
       "type": "string",

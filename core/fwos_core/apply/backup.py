@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Dict, List, Optional
+from typing import AbstractSet, Dict, List, Optional
 
 from .executor import SystemExecutor
 from .paths import Paths
@@ -65,6 +65,7 @@ def create_backup(
     backup_id: str,
     label: Optional[str] = None,
     use_live_config: bool = False,
+    preserve: AbstractSet[str] = frozenset(),
 ) -> str:
     """Snapshot the config and all managed rendered files.
 
@@ -113,7 +114,7 @@ def create_backup(
         )
         + "\n",
     )
-    prune_backups(executor, paths)
+    prune_backups(executor, paths, preserve=preserve)
     return backup_id
 
 
@@ -122,10 +123,17 @@ def list_backups(executor: SystemExecutor, paths: Paths) -> List[str]:
 
 
 def prune_backups(
-    executor: SystemExecutor, paths: Paths, keep: int = KEEP_BACKUPS
+    executor: SystemExecutor,
+    paths: Paths,
+    keep: int = KEEP_BACKUPS,
+    preserve: AbstractSet[str] = frozenset(),
 ) -> None:
+    """Delete the oldest backups beyond ``keep``, never touching ``preserve``
+    (e.g. a backup that is about to be restored)."""
     backups = list_backups(executor, paths)
     for backup_id in backups[:-keep] if len(backups) > keep else []:
+        if backup_id in preserve:
+            continue
         executor.rmtree(paths.backups_dir / backup_id)
 
 

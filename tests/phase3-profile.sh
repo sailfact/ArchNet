@@ -32,7 +32,7 @@ for file in \
     core/fwos_core/render/nftables.py core/fwos_core/apply/machine.py \
     cli/pyproject.toml cli/fwos_cli/main.py \
     scripts/stage-airootfs.sh airootfs/usr/local/bin/fwctl \
-    airootfs/etc/hostname airootfs/etc/locale.conf airootfs/etc/motd \
+    airootfs/etc/locale.conf airootfs/etc/motd \
     airootfs/etc/shadow airootfs/etc/mkinitcpio.conf.d/archiso.conf \
     airootfs/etc/mkinitcpio.d/linux.preset \
     airootfs/etc/sysctl.d/20-fwos-router.conf \
@@ -54,6 +54,7 @@ for file in \
     airootfs/usr/lib/fwos/fwos_core/model.py \
     airootfs/usr/lib/fwos/fwos_cli/main.py \
     airootfs/etc/nftables.conf airootfs/etc/dnsmasq.conf \
+    airootfs/etc/hostname \
     airootfs/etc/systemd/network/20-wan.network \
     airootfs/etc/systemd/network/30-lan.network
 do
@@ -138,6 +139,7 @@ do
 done
 if git rev-parse --git-dir >/dev/null 2>&1; then
     tracked="$(git ls-files -- airootfs/etc/nftables.conf airootfs/etc/dnsmasq.conf \
+        airootfs/etc/hostname \
         'airootfs/etc/systemd/network/*.network' airootfs/etc/project \
         airootfs/usr/lib/fwos airootfs/var/lib/project)"
     [[ -z "$tracked" ]] || fail "rendered/staged files must not be tracked: $tracked"
@@ -181,8 +183,8 @@ assert_contains config/schema.json '"const": 1'
 assert_contains config/example-config.yaml 'version: 1'
 for entry in '/airootfs/usr/lib/fwos/' '/airootfs/etc/project/' \
     '/airootfs/var/lib/project/' '/airootfs/etc/nftables.conf' \
-    '/airootfs/etc/dnsmasq.conf' '/airootfs/etc/systemd/network/*.network' \
-    '__pycache__/'
+    '/airootfs/etc/dnsmasq.conf' '/airootfs/etc/hostname' \
+    '/airootfs/etc/systemd/network/*.network' '__pycache__/'
 do
     assert_contains .gitignore "$entry"
 done

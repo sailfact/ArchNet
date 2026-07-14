@@ -74,6 +74,14 @@ def _breaking_edits():
     def bad_user_role(doc):
         doc["users"] = [{"name": "ops", "role": "viewer"}]
 
+    def hyphenated_zone(doc):
+        # Zone names become nft identifiers (<zone>_if); hyphens are invalid.
+        doc["zones"]["guest-lan"] = {"interfaces": ["lan"]}
+        del doc["zones"]["lan"]
+
+    def hyphenated_rule_zone_ref(doc):
+        doc["rules"][0]["from"] = "guest-lan"
+
     return [
         ("missing-version", missing_version, "/"),
         ("wrong-version", wrong_version, "/version"),
@@ -88,6 +96,8 @@ def _breaking_edits():
         ("bad-lease", bad_lease, "/dhcp/servers/0/lease_time"),
         ("empty-zone", empty_zone, "/zones/lan/interfaces"),
         ("bad-user-role", bad_user_role, "/users/0/role"),
+        ("hyphenated-zone", hyphenated_zone, "/zones"),
+        ("hyphenated-rule-zone-ref", hyphenated_rule_zone_ref, "/rules/0/from"),
     ]
 
 

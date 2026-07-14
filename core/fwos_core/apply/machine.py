@@ -101,24 +101,63 @@ def load_and_validate(
     return config
 
 
-def _reload_commands(paths: Paths) -> List[List[str]]:
-    return [
+def _reload_commands(
+    paths: Paths,
+    devices: Optional[Sequence[str]] = None,
+    hostname: Optional[str] = None,
+) -> List[List[str]]:
+    commands = [
         ["nft", "-f", str(paths.root / NFTABLES_PATH)],
         ["networkctl", "reload"],
-        ["systemctl", "restart", "dnsmasq"],
     ]
+    # `networkctl reload` only re-reads unit files; the live links must be
+    # reconfigured or an address change would not take effect until reboot,
+    # silently defeating the confirm window.
+    if devices:
+        commands.append(["networkctl", "reconfigure", *devices])
+    if hostname:
+        commands.append(["hostnamectl", "set-hostname", hostname])
+    commands.append(["systemctl", "restart", "dnsmasq"])
+    return commands
 
 
 def _reload_services(
-    executor: SystemExecutor, paths: Paths
+    executor: SystemExecutor,
+    paths: Paths,
+    devices: Optional[Sequence[str]] = None,
+    hostname: Optional[str] = None,
 ) -> List[str]:
     """Run the reload sequence; returns failure descriptions (empty == ok)."""
     failures = []
-    for argv in _reload_commands(paths):
+    for argv in _reload_commands(paths, devices, hostname):
         result = executor.run(argv)
         if not result.ok:
             failures.append(f"{' '.join(argv)}: {result.stderr.strip()}")
     return failures
+
+
+def _devices(config: Config) -> List[str]:
+    return sorted(
+        interface.device for interface in config.interfaces.values()
+    )
+
+
+def _committed_context(
+    executor: SystemExecutor, paths: Paths
+) -> tuple:
+    """(devices, hostname) from the committed config, for reloads after a
+    restore; falls back to (None, None) so a rollback still reloads the
+    base services even if the committed copy cannot be read."""
+    try:
+        schema = load_schema()
+        config, errors = validate_yaml_text(
+            executor.read_text(paths.committed_config_path), schema
+        )
+    except Exception:
+        return None, None
+    if errors or config is None:
+        return None, None
+    return _devices(config), config.hostname
 
 
 def _read_pending(executor: SystemExecutor, paths: Paths) -> Optional[Mapping]:
@@ -235,13 +274,15 @@ def apply(
             )
             + "\n",
         )
-        failures = _reload_services(executor, paths)
+        failures = _reload_services(
+            executor, paths, _devices(config), config.hostname
+        )
         if failures:
             raise OperationalError("; ".join(failures))
     except Exception as exc:
         # Self-rollback: the admin may already be locked out.
         backup_mod.restore_backup(executor, paths, backup_id)
-        _reload_services(executor, paths)
+        _reload_services(executor, paths, *_committed_context(executor, paths))
         timer.cancel(session_id)
         executor.remove(paths.pending_path)
         _append_history(
@@ -314,12 +355,21 @@ def rollback(
             raise OperationalError("no backups available to roll back to")
         backup_id = backups[-1]
 
+    if not executor.exists(paths.backups_dir / backup_id / "manifest.json"):
+        raise backup_mod.BackupError(f"backup {backup_id!r} not found")
+
     # Preserve the state being discarded; the live config text describes it.
+    # The restore target is exempt from pruning or it could be deleted here.
     prerollback_id = backup_mod.create_backup(
-        executor, paths, _timestamp(clock), label="prerollback", use_live_config=True
+        executor,
+        paths,
+        _timestamp(clock),
+        label="prerollback",
+        use_live_config=True,
+        preserve={backup_id},
     )
     backup_mod.restore_backup(executor, paths, backup_id)
-    failures = _reload_services(executor, paths)
+    failures = _reload_services(executor, paths, *_committed_context(executor, paths))
     _clear_pending(executor, timer, paths)
     _append_history(
         executor,

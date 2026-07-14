@@ -260,6 +260,53 @@ def test_rollback_removes_stale_managed_files(system):
     assert not executor.exists("/etc/systemd/network/31-lan.network")
 
 
+def test_reload_reconfigures_links_and_restarts_dnsmasq_last(system):
+    executor, timer, log = system
+    edit_config(executor)
+    run_apply(executor, timer)
+    runs = [event[1] for event in log if event[0] == "run"]
+    reload_i = runs.index("networkctl reload")
+    reconfigure_i = runs.index("networkctl reconfigure eth0 eth1")
+    dnsmasq_i = runs.index("systemctl restart dnsmasq")
+    assert reload_i < reconfigure_i < dnsmasq_i
+    assert "hostnamectl set-hostname fwos" in runs
+
+
+def test_hostname_change_is_applied(system):
+    executor, timer, log = system
+    edit_config(executor, "hostname: fwos", "hostname: gateway")
+    run_apply(executor, timer)
+    assert executor.fs["/etc/hostname"] == "gateway\n"
+    runs = [event[1] for event in log if event[0] == "run"]
+    assert "hostnamectl set-hostname gateway" in runs
+
+
+def test_rollback_reload_uses_restored_config_context(system):
+    executor, timer, log = system
+    clock = TickingClock()
+    edit_config(executor)
+    run_apply(executor, timer, clock)
+    del log[:]
+    machine.rollback(executor, timer, PATHS, clock=clock, pending_only=True)
+    runs = [event[1] for event in log if event[0] == "run"]
+    assert "networkctl reconfigure eth0 eth1" in runs
+    assert "hostnamectl set-hostname fwos" in runs
+
+
+def test_rollback_to_oldest_backup_survives_pruning(system):
+    from fwos_core.apply import backup as backup_mod
+
+    executor, timer, log = system
+    for hour in range(10):
+        backup_mod.create_backup(executor, PATHS, f"20260712T{hour:02d}0000Z")
+    oldest = "20260712T000000Z"
+    outcome = machine.rollback(
+        executor, timer, PATHS, clock=TickingClock(), backup_id=oldest
+    )
+    assert outcome["restored"] == oldest
+    assert oldest in backup_mod.list_backups(executor, PATHS)
+
+
 def test_status_reports_pending_and_validity(system):
     executor, timer, log = system
     report = machine.status(executor, PATHS)
