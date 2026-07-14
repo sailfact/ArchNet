@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, List, Mapping, Optional, Sequence
 
 from ..model import Config
+from .. import inspect as inspect_mod
 from ..render import DNSMASQ_PATH, NFTABLES_PATH, render_all
 from ..schema import load_schema
 from ..validate import ConfigInvalid, validate_yaml_text
@@ -355,8 +356,11 @@ def rollback(
             raise OperationalError("no backups available to roll back to")
         backup_id = backups[-1]
 
-    if not executor.exists(paths.backups_dir / backup_id / "manifest.json"):
+    if backup_id not in backup_mod.list_backups(executor, paths):
         raise backup_mod.BackupError(f"backup {backup_id!r} not found")
+    details = backup_mod.inspect_backup(executor, paths, backup_id)
+    if not details["integrity"]["valid"]:
+        raise backup_mod.BackupError(f"backup {backup_id!r} is corrupt")
 
     # Preserve the state being discarded; the live config text describes it.
     # The restore target is exempt from pruning or it could be deleted here.
@@ -396,11 +400,12 @@ def status(
         "pending": None,
         "backups": backup_mod.list_backups(executor, paths),
     }
+    config = None
     if executor.exists(paths.config_path):
         text = executor.read_text(paths.config_path)
         result["config_sha256"] = _sha256(text)
         try:
-            load_and_validate(executor, paths, schema)
+            config = load_and_validate(executor, paths, schema)
             result["valid"] = True
         except ConfigInvalid as exc:
             result["errors"] = [error.as_dict() for error in exc.errors]
@@ -415,4 +420,19 @@ def status(
         lines = executor.read_text(paths.history_path).strip().splitlines()
         if lines:
             result["last_event"] = lines[-1]
+    result["backup_count"] = len(result["backups"])
+    result.update(inspect_mod.services(executor))
+    service_healthy = result.pop("healthy")
+    if config is not None:
+        interface_report = inspect_mod.interfaces(executor, config)
+        result["interfaces"] = interface_report["interfaces"]
+        interface_healthy = interface_report["healthy"]
+    else:
+        result["interfaces"] = []
+        interface_healthy = False
+    result["health"] = {
+        "healthy": result["valid"] and service_healthy and interface_healthy,
+        "interfaces": interface_healthy,
+        "services": service_healthy,
+    }
     return result

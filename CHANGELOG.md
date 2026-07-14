@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Complete the Phase 4 `fwctl` management surface: structured `config validate`/`config render` commands with compatibility aliases, desired-plus-live `interfaces`, operational service/interface health in `status`, and checksum-verifying `backup list/show/restore` commands that reuse the rollback state machine and forensic snapshot safeguards.
+- Extend unit and QEMU config-lab coverage for grouped commands, partial live-state reporting, degraded services, backup inspection, explicit restoration, and the existing confirmed/unconfirmed apply paths. Package updates remain explicitly deferred to Phase 7; no unsafe pacman upgrade path is added.
 - Add the Phase 3 declarative config engine: `/etc/project/config.yaml` (validated against `config/schema.json`, JSON Schema draft 2020-12 plus semantic cross-reference checks) is now the single source of truth, rendered deterministically into the nftables ruleset, dnsmasq configuration, systemd-networkd units, and `/etc/hostname` (set live via `hostnamectl`; applies also run `networkctl reconfigure` on managed links so address changes take effect immediately).
 - Add `fwctl` (Python, thin Phase 4 slice): `validate`, `render` (unified-diff dry run), `apply --timeout`, `confirm`, `rollback [--to ID|--pending]`, `status`, with `--json` output and distinct exit codes for validation and test-stage failures.
 - Enforce the apply state machine `Validate -> Render -> Test -> Apply -> Confirm -> Commit`: unconditional pre-apply backups under `/var/lib/project/backups/` (last 10 kept), a verified `systemd-run` rollback timer armed before any file is installed, automatic revert of unconfirmed or failed applies, and forensic pre-rollback snapshots.

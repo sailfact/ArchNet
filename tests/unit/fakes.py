@@ -21,10 +21,19 @@ class FakeExecutor:
         self.log = log
         # command name -> stderr; presence makes that command fail (rc 1)
         self.failing_commands: Dict[str, str] = {}
+        # full command line -> (return code, stdout, stderr)
+        self.command_results: Dict[str, Tuple[int, str, str]] = {}
 
     def run(self, argv: Sequence[str]) -> CommandResult:
         self.log.append(("run", " ".join(argv)))
         name = argv[0]
+        command = " ".join(argv)
+        if command in self.command_results:
+            returncode, stdout, stderr = self.command_results[command]
+            return CommandResult(
+                argv=tuple(argv), returncode=returncode,
+                stdout=stdout, stderr=stderr,
+            )
         if name in self.failing_commands:
             return CommandResult(
                 argv=tuple(argv),

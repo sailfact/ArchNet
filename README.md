@@ -14,13 +14,23 @@ Since Phase 3, `/etc/project/config.yaml` is the single source of truth. The nft
 Edit `/etc/project/config.yaml` (interfaces, zones, rules, NAT, DHCP, DNS), then drive the engine with `fwctl`:
 
 ```sh
-fwctl validate            # schema + semantic validation only
-fwctl render              # unified diff of rendered files vs the live system
+fwctl config validate     # schema + semantic validation only
+fwctl config render       # unified diff of rendered files vs the live system
 fwctl apply --timeout 120 # validate, render, test, back up, apply
 fwctl confirm             # commit within the window, or the change rolls back
 fwctl rollback            # restore the latest pre-apply backup on demand
-fwctl status              # validity, pending apply, backups
+fwctl interfaces          # desired model joined to live interface state
+fwctl backup list         # inspect available pre-apply/forensic backups
+fwctl backup show ID      # verify and describe one backup
+fwctl backup restore ID   # restore through the rollback state machine
+fwctl status              # config, pending apply, services, interfaces, backups
 ```
+
+The original `fwctl validate`, `fwctl render`, and `fwctl rollback [--to ID]`
+forms remain supported for automation compatibility. `fwctl` deliberately has
+no YAML setters: edit the source model, preview it, then apply it. Safe package
+updates are deferred to Phase 7; there is no `fwctl update` command and fwOS
+never performs a blind full-system upgrade.
 
 Every apply takes a pre-apply backup and arms a rollback timer *before* touching the system; if `fwctl confirm` does not arrive within the window (default 120 s), the previous configuration and services are restored automatically — the defense against locking yourself out of a remote firewall. Manual rollbacks and timer rollbacks both preserve the discarded state under `/var/lib/project/backups/` for inspection.
 
@@ -45,7 +55,7 @@ make check   # config-engine unit tests (schema, renderers, state machine, fwctl
 make test    # full gate: unit tests, profile contract, QEMU labs
 ```
 
-`make test` runs the unit tests and profile contract test, boots the ISO headlessly through BIOS and UEFI, runs the QEMU network lab (firewall VM plus LAN client VM verifying DHCP, DNS via `fwos.lan`, NAT, LAN-only SSH, and the WAN default-deny), and then the QEMU config lab, which exercises `fwctl` in the guest: validate/status, an unconfirmed apply reverted by the rollback timer (the lockout drill), a confirmed apply, and a manual rollback. Serial logs are preserved under `_out/test-logs/`.
+`make test` runs the unit tests and profile contract test, boots the ISO headlessly through BIOS and UEFI, runs the QEMU network lab (firewall VM plus LAN client VM verifying DHCP, DNS via `fwos.lan`, NAT, LAN-only SSH, and the WAN default-deny), and then the QEMU config lab, which exercises grouped and compatibility CLI forms, live interface/service status, backup inspection and explicit restore, an unconfirmed apply reverted by the rollback timer (the lockout drill), and a confirmed apply. Serial logs are preserved under `_out/test-logs/`.
 
 For an interactive UEFI or BIOS boot:
 

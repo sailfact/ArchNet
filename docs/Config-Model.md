@@ -93,3 +93,20 @@ live config and the committed baseline, and renders the default service
 files into `airootfs/`. All staged output is gitignored: rendered files
 are renderer output only, never committed, never hand-edited. On the
 appliance the same renderer runs through `fwctl apply`.
+
+## Phase 4 management interface
+
+`fwctl config validate` and `fwctl config render` are the structured config
+commands; the Phase 3 `validate` and `render` spellings remain aliases. The CLI
+does not edit YAML. `fwctl interfaces` joins the desired interface/zone model
+to best-effort live link and address state, while `fwctl status` summarizes
+config validity, pending apply state, service/interface health, history, and
+backup availability. Unavailable live observations are reported as `unknown`
+without hiding the declarative configuration.
+
+`fwctl backup list`, `backup show ID`, and `backup restore ID` expose the
+existing state-machine backup store. Show verifies the stored checksums;
+restore calls the same rollback operation as `rollback --to ID`, including the
+pre-rollback forensic snapshot and service reload. Advanced backup scheduling,
+encryption, and export remain Phase 16. Safe signed package updates remain
+Phase 7, so Phase 4 intentionally provides no `fwctl update` command.

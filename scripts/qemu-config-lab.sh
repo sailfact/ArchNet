@@ -2,7 +2,7 @@
 set -euo pipefail
 trap '' PIPE
 
-# Boots a single firewall VM and exercises the Phase 3 config engine end
+# Boots a single firewall VM and exercises the Phase 4 management CLI end
 # to end over serial:
 #   - fwctl validate / status --json, and rendered files matching the ISO
 #   - the R1 lockout drill: an unconfirmed apply is reverted by the
@@ -152,8 +152,12 @@ check() {
 check 15 engine-staged \
     'test -f /usr/lib/fwos/schema.json && test -f /etc/project/config.yaml && test -f /var/lib/project/committed-config.yaml'
 check 30 fwctl-validate 'fwctl validate'
+check 30 fwctl-grouped-validate 'fwctl --json config validate | jq -e ".ok == true and .action == \"config.validate\""'
+check 30 fwctl-grouped-render 'fwctl --json config render | jq -e ".ok == true and .data.diff == \"\""'
+check 30 fwctl-interfaces \
+    'fwctl --json interfaces | jq -e ".ok == true and (.data.interfaces | length) == 2 and (.data.interfaces | all(.live.present == true))"'
 check 30 fwctl-status-json \
-    'fwctl --json status | jq -e ".ok == true and .data.valid == true and .data.pending == null"'
+    'fwctl --json status | jq -e ".ok == true and .data.valid == true and .data.pending == null and .data.backup_count == 0 and (.data.services | length) == 5"'
 check 30 render-matches-iso \
     'fwctl --json render | jq -e ".data.diff == \"\""'
 
@@ -177,6 +181,8 @@ check 15 lockout-dnsmasq-active 'systemctl is-active --quiet dnsmasq'
 check 15 happy-edit-config \
     'sed -i "s/end: 10.10.10.200/end: 10.10.10.150/" /etc/project/config.yaml'
 check 90 happy-apply 'fwctl apply --timeout 120'
+check 10 happy-save-backup-id \
+    'jq -r .backup_id /var/lib/project/pending.json > /run/phase4-backup-id && test -s /run/phase4-backup-id'
 check 30 happy-confirm 'fwctl confirm'
 check 10 happy-change-live 'grep -q "10.10.10.150" /etc/dnsmasq.conf'
 check 10 happy-pending-cleared 'test ! -f /var/lib/project/pending.json'
@@ -185,10 +191,16 @@ check 10 happy-committed \
 check 10 happy-default-deny-intact \
     'nft list chain inet filter input | grep -q "policy drop"'
 check 10 happy-backups-exist '[ -n "$(ls /var/lib/project/backups)" ]'
+check 30 happy-backup-list \
+    'fwctl --json backup list | jq -e ".ok == true and .data.count >= 1 and (.data.backups | all(.integrity.valid == true))"'
+check 30 happy-backup-show \
+    'fwctl --json backup show "$(cat /run/phase4-backup-id)" | jq -e ".ok == true and .data.integrity.valid == true"'
 check 15 happy-dnsmasq-active 'systemctl is-active --quiet dnsmasq'
 
-# Manual rollback returns to the pre-apply backup.
-check 90 manual-rollback 'fwctl rollback'
+# Explicit backup restoration returns to the pre-apply backup through the
+# same rollback path and retains a forensic pre-rollback snapshot.
+check 90 manual-rollback \
+    'fwctl --json backup restore "$(cat /run/phase4-backup-id)" | jq -e ".ok == true and (.data.prerollback | contains(\"prerollback\"))"'
 check 10 manual-rollback-live 'grep -q "10.10.10.200" /etc/dnsmasq.conf'
 check 10 manual-rollback-config 'grep -q "end: 10.10.10.200" /etc/project/config.yaml'
 check 15 manual-rollback-dnsmasq-active 'systemctl is-active --quiet dnsmasq'

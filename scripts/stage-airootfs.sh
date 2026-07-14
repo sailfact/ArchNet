@@ -56,7 +56,7 @@ install_if_changed config/example-config.yaml \
 # are renderer output only and are never committed.
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-PYTHONPATH=core:cli python3 -m fwos_cli \
+PYTHONPATH="core:cli${PYTHONPATH:+:$PYTHONPATH}" python3 -m fwos_cli \
     --config config/example-config.yaml --schema config/schema.json \
     render --output "$tmp" >/dev/null
 while IFS= read -r -d '' file; do

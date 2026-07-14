@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import AbstractSet, Dict, List, Optional
+from typing import AbstractSet, Dict, List, Mapping, Optional
 
 from .executor import SystemExecutor
 from .paths import Paths
@@ -122,6 +122,65 @@ def list_backups(executor: SystemExecutor, paths: Paths) -> List[str]:
     return sorted(executor.listdir(paths.backups_dir))
 
 
+def inspect_backup(
+    executor: SystemExecutor, paths: Paths, backup_id: str
+) -> Mapping:
+    """Read backup metadata and verify all stored checksums."""
+    if backup_id not in list_backups(executor, paths):
+        raise BackupError(f"backup {backup_id!r} not found")
+    backup_dir = paths.backups_dir / backup_id
+    manifest_path = backup_dir / "manifest.json"
+    if not executor.exists(manifest_path):
+        raise BackupError(f"backup {backup_id!r} not found")
+    try:
+        manifest = json.loads(executor.read_text(manifest_path))
+        config_text = executor.read_text(backup_dir / "config.yaml")
+        checks = {
+            relpath: _sha256(
+                executor.read_text(backup_dir / "files" / relpath)
+            ) == checksum
+            for relpath, checksum in manifest["files"].items()
+        }
+        config_ok = _sha256(config_text) == manifest["config_sha256"]
+    except (
+        AttributeError,
+        KeyError,
+        OSError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise BackupError(f"backup {backup_id!r} is unreadable: {exc}") from exc
+    return {
+        "backup_id": backup_id,
+        "kind": "prerollback" if "-prerollback" in backup_id else "preapply",
+        "config_sha256": manifest["config_sha256"],
+        "files": sorted(manifest["files"]),
+        "integrity": {
+            "valid": config_ok and all(checks.values()),
+            "config": config_ok,
+            "files": checks,
+        },
+    }
+
+
+def list_backup_details(executor: SystemExecutor, paths: Paths) -> List[Mapping]:
+    details = []
+    for backup_id in list_backups(executor, paths):
+        try:
+            details.append(inspect_backup(executor, paths, backup_id))
+        except BackupError as exc:
+            details.append(
+                {
+                    "backup_id": backup_id,
+                    "kind": "unknown",
+                    "files": [],
+                    "integrity": {"valid": False},
+                    "warning": str(exc),
+                }
+            )
+    return details
+
+
 def prune_backups(
     executor: SystemExecutor,
     paths: Paths,
@@ -148,6 +207,18 @@ def restore_backup(
         raise BackupError(f"backup {backup_id!r} not found")
     manifest = json.loads(executor.read_text(manifest_path))
 
+    # Verify the complete snapshot before mutating any live path. A corrupt
+    # later file must not leave a partially restored firewall.
+    config_text = executor.read_text(backup_dir / "config.yaml")
+    if _sha256(config_text) != manifest["config_sha256"]:
+        raise BackupError(f"backup {backup_id!r} is corrupt: config.yaml")
+    contents = {}
+    for relpath, checksum in sorted(manifest["files"].items()):
+        content = executor.read_text(backup_dir / "files" / relpath)
+        if _sha256(content) != checksum:
+            raise BackupError(f"backup {backup_id!r} is corrupt: {relpath}")
+        contents[relpath] = content
+
     touched: List[str] = []
     # Remove files the engine manages now but did not manage back then.
     backup_files = set(manifest["files"])
@@ -155,14 +226,10 @@ def restore_backup(
         if relpath not in backup_files:
             executor.remove(paths.root / relpath)
             touched.append(relpath)
-    for relpath, checksum in sorted(manifest["files"].items()):
-        content = executor.read_text(backup_dir / "files" / relpath)
-        if _sha256(content) != checksum:
-            raise BackupError(f"backup {backup_id!r} is corrupt: {relpath}")
+    for relpath, content in contents.items():
         executor.write_text(paths.root / relpath, content)
         touched.append(relpath)
 
-    config_text = executor.read_text(backup_dir / "config.yaml")
     executor.write_text(paths.config_path, config_text)
     executor.write_text(paths.committed_config_path, config_text)
     executor.write_text(
